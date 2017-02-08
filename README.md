@@ -40,7 +40,8 @@ Group is the minimum unit of computation for directx.
 Every unit is a cube with 3 dimensions
 Grupo: Equipo de hilos que comparten  variables globales.
 
-The cpu starts cubes in the GPU
+The cpu starts cubes in the GPU.
+
 [https://msdn.microsoft.com/en-us/library/windows/desktop/ff476405(v=vs.85).aspx](https://msdn.microsoft.com/en-us/library/windows/desktop/ff476405(v=vs.85).aspx)
 ```
 int x; // this variable is only visible for this Group
@@ -51,3 +52,45 @@ void main()
 
 }
 ```
+
+
+## CPU vs GPU
+
+| CPU | GPU     |
+| :------------- | :------------- |
+| Low latency memory       | high bandwidth memory       |
+| random accesses | sequential accesses |
+| 0.1 Tflop compute | 1Tflop computing |
+| 1GFlop/watt | 10GFlog/watt |
+
+
+The CPU is designed to handle random access operations.
+
+
+
+
+
+### _The PC as an asymetric Multiprocessor system_
+
+
+## Structured buffers
+
+context & factory
+
+
+```
+StructuredBuffer Input;
+RWStructuredBuffer Output; /* Read write StructuredBuffer */
+
+int x;
+
+[numthreads(10,8,3)]
+
+void main(uint3 id:SV_DispatchThreadID)
+{
+
+}
+```
+
+
+Intrinsic types, son parte intrinsica de del lenguaje.
