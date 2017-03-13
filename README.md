@@ -95,6 +95,26 @@ void main(uint3 id:SV_DispatchThreadID)
 
 }
 ```
+## Constant Buffers
+
+
+    Constant buffer:
+    Es una regrion de memoria interna en el GPU para parametrizar el funcionamiento de los compute shaders, antes de que estos se inicien.
+
+    Una vez iniciada la ejecucion de un compute shader, esas varaibles son consideradas de solo lectura
+
+    La ventaja de los constant buffers es que el cpu puede actualizar el valor de estas variables en cualquier momento y de manera eficiente.
+
+    1) Crear un buffer con las siguientes caracteristicas
+    	D3D11_BIND_CONSTANTBUFFER,
+    	D3D11_CPU_ACCESS_WRITE
+    		El tamaño de un constatn buffer debe ser multiplo de 16 bytes.
+    2) No se requiere vista para un constant buffer.
+    3) El formato del contendio queda definido por el programador
+
+    Aplicaciones:
+    Paso de matrices, paso de parametros simples, valores iniciales, iteraciones maximas, etc.
+    El dispatcher solo da como parametros el thread id
 
 
 Intrinsic types, son parte intrinsica de del lenguaje.
@@ -119,3 +139,4 @@ registers:
 https://msdn.microsoft.com/en-us/library/hh447206(v=VS.85).aspx
 
 http://on-demand-gtc.gputechconf.com/gtcnew/on-demand-gtc.php?searchByKeyword=DirectCompute&searchItems=&sessionTopic=&sessionEvent=&sessionYear=&sessionFormat=&submit=&select=+
+=======
