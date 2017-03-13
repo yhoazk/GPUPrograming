@@ -66,7 +66,11 @@ void main()
 
 The CPU is designed to handle random access operations.
 
+## DirectCompute Memory Model
+### register based memory
 
+### device memory
+### group shared memory
 
 
 
@@ -94,3 +98,24 @@ void main(uint3 id:SV_DispatchThreadID)
 
 
 Intrinsic types, son parte intrinsica de del lenguaje.
+
+
+
+Tutorial:
+http://www.codinglabs.net/tutorial_compute_shaders_filters.aspx
+
+HLSL types:
+https://msdn.microsoft.com/en-us/library/windows/desktop/bb509634(v=vs.85).aspx
+
+https://software.intel.com/sites/default/files/m/d/4/1/d/8/DirectCompute_on_DirectX_11.pdf
+
+https://code.msdn.microsoft.com/windowsdesktop/DirectCompute-Basic-Win32-7d5a7408#content
+
+
+https://msdn.microsoft.com/en-us/library/windows/desktop/ff476405(v=vs.85).aspx
+
+registers:
+
+https://msdn.microsoft.com/en-us/library/hh447206(v=VS.85).aspx
+
+http://on-demand-gtc.gputechconf.com/gtcnew/on-demand-gtc.php?searchByKeyword=DirectCompute&searchItems=&sessionTopic=&sessionEvent=&sessionYear=&sessionFormat=&submit=&select=+
