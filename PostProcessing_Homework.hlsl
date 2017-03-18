@@ -20,45 +20,52 @@ void main(uint3 id : SV_DispatchThreadID, uint3 lid : SV_GroupThreadID)// SV_Gro
     //if(lid.x== 0 && lid.y ==0) // aqui se presetna un problema de divergencia, cuando not todos los hilos hacen lo mismo debido a una bifurcacion
    //{ 
     float4 suma = 0;
-    int lim = 8;
+    unsigned int lim = 8;
     if (lid.x < lim)
     {
         Data[lid.y][lid.x] += Data[lid.y][lid.x+lim];
     }
     lim >>= 1;
 
+    GroupMemoryBarrierWithGroupSync();
     if ( lid.x < lim)
     {
         Data[lid.y][lid.x] += Data[lid.y][lid.x+lim];
     }
     lim >>= 1;
 
+    GroupMemoryBarrierWithGroupSync();
     if ( lid.x < lim)
         Data[lid.y][lid.x] += Data[lid.y][lid.x+lim];
     lim >>= 1;
 
+    GroupMemoryBarrierWithGroupSync();
     if ( lid.x < lim)
         Data[lid.y][lid.x] += Data[lid.y][lid.x+lim];
-
+    GroupMemoryBarrierWithGroupSync();
     lim = 8;
     if ( lid.y < lim)
         Data[lid.y][lid.x] += Data[lid.y+lim][0];
     lim >>= 1;
 
+    GroupMemoryBarrierWithGroupSync();
     if ( lid.y < lim)
         Data[lid.y][lid.x] += Data[lid.y+lim][0];
     lim >>= 1;
 
+    GroupMemoryBarrierWithGroupSync();
 
     if ( lid.y < lim)
         Data[lid.y][lid.x] += Data[lid.y+lim][0];
     lim >>= 1;
 
+    GroupMemoryBarrierWithGroupSync();
 
     if ( lid.y < lim)
         Data[lid.y][lid.x] += Data[lid.y+lim][0];
     lim >>= 1;
 
+    GroupMemoryBarrierWithGroupSync();
 
     //+Data[lid.y + 1][lid.x + 1]);
         // TAREA: Reducir la divergencia de este algoritmo.
@@ -74,7 +81,8 @@ void main(uint3 id : SV_DispatchThreadID, uint3 lid : SV_GroupThreadID)// SV_Gro
             }
         }
       //GroupMemoryBarrierWithGroupSync();*/
-    Output[id.xy/16] = Data[lid.y / 256][0]/16.0f;
+    Output[id.xy/16] = Data[lid.y / 16][0] / 256.0f; // float4(lid.x/16.0f+lid.y/16.0f,0,0,0);
+    //Data[lid.y / 16][0] / 256.0f;
     //Data[lid.y][lid.x];
      //suma; // float4(1,0,0,0); // suma / 256.0f;
 //}
