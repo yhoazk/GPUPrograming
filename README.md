@@ -53,6 +53,42 @@ void main()
 }
 ```
 
+### [How the data is copied from CPU->GPU](http://stackoverflow.com/questions/15814211/when-is-the-data-copied-to-gpu-memory)
+
+DirectX transfers data from system memory into video memory when the creation methods
+are called. An example of a creation method is `ID3D11Device::CreateBuffer`. This method requires a pointer to the memory location of where the data is, so it can be copied from
+system RAM to video RAM. However, if the pointer that is passed into, is a null pointer
+then just sets the amount of space, so you can copy the data later.
+
+
+Example:
+```C
+// Fill in a buffer descrition
+D3D11_BUFFER_DESC bufferDesc;
+bufferDesc.Usage            = D3D11_USAGE_DYNAMIC;
+bufferDesc.ByteWidth        = sizeof(Vertex_dynamic) * m_iHowManyVertices;
+bufferDesc.BindFlags        = D3D11_BIND_VERTEX_BUFFER;
+bufferDesc.CPUAccessFlags   = D3D11_CPU_ACCESS_WRITE;
+bufferDesc.MiscFlags        = 0;
+bufferDesc.StructureByteStride = NULL;
+
+// Fill in the subresource data.
+D3D11_SUBRESOURCE_DATA InitData;
+InitData.pSysMem = &_vData[0];
+InitData.SysMemPitch = NULL;
+InitData.SysMemSlicePitch = NULL;
+
+// Create the vertex buffer.
+/*Data is being copyed right now*/
+m_pDxDevice->CreateBuffer(&bufferDesc, &InitData, &m_pDxVertexBuffer_PiecePos);
+
+```
+
+
+
+
+
+
 
 ## CPU vs GPU
 
@@ -71,6 +107,7 @@ The CPU is designed to handle random access operations.
 
 ### device memory
 ### group shared memory
+
 
 
 
@@ -119,6 +156,12 @@ void main(uint3 id:SV_DispatchThreadID)
 
 Intrinsic types, son parte intrinsica de del lenguaje.
 
+###[Resouce Management Best Practices](https://msdn.microsoft.com/en-us/library/windows/desktop/ee418784(v=vs.85).aspx#managed_resources)
+
+
+
+#### Scalar Data types
+https://msdn.microsoft.com/en-us/library/windows/desktop/bb509646(v=vs.85).aspx
 
 
 Tutorial:
