@@ -154,10 +154,53 @@ void main(uint3 id:SV_DispatchThreadID)
     El dispatcher solo da como parametros el thread id
 
 
+#### Timers
+
+Los timers se deben de poner en initialize, y despues de inicializar DirectCompute.
+
+
+```c
+switch (message) {
+  case WM_TIMER:
+  switch (wParam) {
+    case 1:
+      InvalidateRect(hWnd)
+  }
+}
+
+/* En init instacen antes  de mostrar las particulas pero despeus de crearlas */
+
+SetTimer(hWnd, 1, 10, 10);
+// Ya en el codigo aactual
+Showwindow(hWnd, nCmdShow);
+UpdateWindow(hWnd);
+
+// En case wm_paint
+
+pDev->CreateRenderTargetView(pBackBuffer, NULL, &pRTV);
+float Color[4] = {0.2,0.3,0.6,0};
+pRTV->Release();
+/* No ahy shader que limpie el render target */
+
+```
+
+
 Intrinsic types, son parte intrinsica de del lenguaje.
 
-###[Resouce Management Best Practices](https://msdn.microsoft.com/en-us/library/windows/desktop/ee418784(v=vs.85).aspx#managed_resources)
+![](./IC520438.png)
 
+### [Resouce Management Best Practices](https://msdn.microsoft.com/en-us/library/windows/desktop/ee418784(v=vs.85).aspx#managed_resources)
+
+![](./IC94410.GIF)
+
+![](IC129596.gif)
+
+
+
+What is a render target?
+https://msdn.microsoft.com/en-us/library/bb976073(v=xnagamestudio.31).aspx
+
+http://web.cse.ohio-state.edu/~wang.3602/courses/cse5542-2013-spring/
 
 
 #### Scalar Data types
@@ -174,8 +217,8 @@ https://software.intel.com/sites/default/files/m/d/4/1/d/8/DirectCompute_on_Dire
 
 https://code.msdn.microsoft.com/windowsdesktop/DirectCompute-Basic-Win32-7d5a7408#content
 
-
-https://msdn.microsoft.com/en-us/library/windows/desktop/ff476405(v=vs.85).aspx
+Dispatch method:
+  https://msdn.microsoft.com/en-us/library/windows/desktop/ff476405(v=vs.85).aspx
 
 registers:
 
