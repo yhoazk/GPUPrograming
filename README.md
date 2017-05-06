@@ -1,4 +1,5 @@
 # GPUPrograming
+
 ITESO GPU programming Hwks and reads
 
 
@@ -11,15 +12,16 @@ Application:
 Point product between two vectors.
 
 With the vertical product ans horizontal sum.
-
+```c
 V0=[1,2,3,4]
 V1=[4,3,2,1]
 Dot(V0,V1) = 20
 C<-V0*V1= [4,6,6,4] <- vertical operation
 C := C h+ C // apply horizontal sumation
 [10,10,10,10]
-
+```
 - - -
+```c
 V0=[1,2,3,4]
 V1=[5,6,7,8]
 Dot(V0,V1) = 70
@@ -29,18 +31,17 @@ C := C h+ C // apply horizontal sumation
 [5+12,21+32,5+12,32+21]
 [17, 53, 17, 53]
 [70,70,70,70]
+```
 
-
-Visual studio
-debug flag: `_DEBUG`
+Visual studio<br>
+debug flag: `_DEBUG` <br>
 Cambia cuando se cambia el modo de release a debug
 
 
-Group is the minimum unit of computation for directx.
-Every unit is a cube with 3 dimensions
-Grupo: Equipo de hilos que comparten  variables globales.
-
-The cpu starts cubes in the GPU.
+* Group is the minimum unit of computation for directx.
+* Every unit is a cube with 3 dimensions
+* Grupo: Equipo de hilos que comparten  variables globales.
+* The cpu starts cubes in the GPU.
 
 [https://msdn.microsoft.com/en-us/library/windows/desktop/ff476405(v=vs.85).aspx](https://msdn.microsoft.com/en-us/library/windows/desktop/ff476405(v=vs.85).aspx)
 ```
@@ -84,12 +85,6 @@ m_pDxDevice->CreateBuffer(&bufferDesc, &InitData, &m_pDxVertexBuffer_PiecePos);
 
 ```
 
-
-
-
-
-
-
 ## CPU vs GPU
 
 | CPU | GPU     |
@@ -115,11 +110,19 @@ The CPU is designed to handle random access operations.
 
 
 ## Structured buffers
+| method | descrition     |
+| :------------- | :------------- |
+| GetDimemensions| Gets the resource dimensions |
+| Load           | Reads the buffer data       |
+| Operator[]     | Returns a **read only** resource variable       |
 
+
+### RWStructuredBuffer
+A read write buffer that can take a `T` type that is a structure.
 context & factory
 
 
-```
+```c
 StructuredBuffer Input;
 RWStructuredBuffer Output; /* Read write StructuredBuffer */
 
@@ -135,23 +138,34 @@ void main(uint3 id:SV_DispatchThreadID)
 ## Constant Buffers
 
 
-    Constant buffer:
-    Es una regrion de memoria interna en el GPU para parametrizar el funcionamiento de los compute shaders, antes de que estos se inicien.
+  Constant buffer:
+  Es una regrion de memoria interna en el GPU para parametrizar el funcionamiento de los compute shaders, antes de que estos se inicien.
 
-    Una vez iniciada la ejecucion de un compute shader, esas varaibles son consideradas de solo lectura
+  Una vez iniciada la ejecucion de un compute shader, esas varaibles son consideradas de solo lectura
 
-    La ventaja de los constant buffers es que el cpu puede actualizar el valor de estas variables en cualquier momento y de manera eficiente.
+  La ventaja de los constant buffers es que el cpu puede actualizar el valor de estas variables en cualquier momento y de manera eficiente.
 
-    1) Crear un buffer con las siguientes caracteristicas
-    	D3D11_BIND_CONSTANTBUFFER,
-    	D3D11_CPU_ACCESS_WRITE
-    		El tamaño de un constatn buffer debe ser multiplo de 16 bytes.
-    2) No se requiere vista para un constant buffer.
-    3) El formato del contendio queda definido por el programador
+  1. Crear un buffer con las siguientes caracteristicas
+    * D3D11_BIND_CONSTANTBUFFER,
+    * D3D11_CPU_ACCESS_WRITE
+    * El tamaño de un constatn buffer debe ser multiplo de 16 bytes.
+  2. No se requiere vista para un constant buffer.
+  3. El formato del contendio queda definido por el programador
 
-    Aplicaciones:
-    Paso de matrices, paso de parametros simples, valores iniciales, iteraciones maximas, etc.
-    El dispatcher solo da como parametros el thread id
+  ##### Aplicaciones:
+  Paso de matrices, paso de parametros simples, valores iniciales, iteraciones maximas, etc.
+  El dispatcher solo da como parametros el thread id
+
+  ##### [How to: Create a constant buffer](https://msdn.microsoft.com/en-us/library/windows/desktop/ff476896(v=vs.85).aspx)
+
+  1. Define a structute that defines the vertex shader constant data.
+  2. Allocate memory for the structure defined in the previous step. Fill this buffer
+    with vertex shader constatn data. (you can user malloc or new or you can allocate
+      memory from the stack.)
+  3. Create a buffer descriptor by
+
+
+
 
 
 #### Timers
@@ -219,6 +233,12 @@ https://code.msdn.microsoft.com/windowsdesktop/DirectCompute-Basic-Win32-7d5a740
 
 Dispatch method:
   https://msdn.microsoft.com/en-us/library/windows/desktop/ff476405(v=vs.85).aspx
+
+#### DirectCompute Basic win32 samples:
+[https://code.msdn.microsoft.com/DirectCompute-Basic-Win32-7d5a7408](https://code.msdn.microsoft.com/DirectCompute-Basic-Win32-7d5a7408)
+
+#### Heterogeneous compute event during Siggraph 2013
+[http://gpgpu.org/index.php?s=SIGGRAPH](http://gpgpu.org/index.php?s=SIGGRAPH)
 
 registers:
 
