@@ -356,7 +356,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #if 1
         auto pISBMapData    = Manager.LoadBuffer(&map.landmark_list[0], sizeof(Map::single_landmark_s), map.landmark_list.size());
         auto pISBParticleIn = Manager.LoadBuffer(pParticles, sizeof(particle_t), MAX_PARTICLES);
-
+        auto pCtx = Manager.GetContext();
         auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(particle_t), MAX_PARTICLES);
         ID3D11ShaderResourceView* pSRV = NULL;
         ID3D11UnorderedAccessView* pUAV = NULL;
@@ -373,10 +373,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             (void**)&pBackBuffer);
         //        ID3D11UnorderedAccessView* pUAV = 0;
         //Manager.GetDevice()->CreateUnorderedAccessView(pBackBuffer, NULL, &pUAV); // crear la vista
+
+        Manager.UpdateConstantBuffer(g_pCBStepInfo, &g_pf_step_data, sizeof(g_pf_step_data));
+
         Manager.GetDevice()->CreateUnorderedAccessView(pISBParticleOut, NULL, &pUAV); // crear la vista
         Manager.GetContext()->CSSetUnorderedAccessViews(0, 1, &pUAV, NULL); //conectar la vista
         Manager.GetContext()->CSSetShader(g_pCSParticleFilter_Predict, NULL, NULL);
         Manager.GetContext()->CSSetShaderResources(0, 1, &pSRV);
+        pCtx->CSSetConstantBuffers(0, 1, &g_pCBStepInfo);        // set the constant buffer
         Manager.GetContext()->Dispatch( 256, 1, 1); // cada 1 representa 256 caracteres a transformar
         Manager.StoreBuffer(pISBParticleOut, sizeof(particle_t), MAX_PARTICLES, pParticles);
         std::ofstream out_txt;
