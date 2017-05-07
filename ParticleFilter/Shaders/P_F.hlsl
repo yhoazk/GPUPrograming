@@ -45,6 +45,8 @@ cbuffer PARAMS
     // NOTA se alinea el padding al elemento mas grande ene el struct
 };        */
 
+
+
 cbuffer PF_STEP_DATA
 {
     float velocity; /* Control input speed */
@@ -53,23 +55,26 @@ cbuffer PF_STEP_DATA
     float y_noise;  /* Current measurement noise */
     float th_noise; /* Current measurement noise */
     float sensor_range;
-    float obs[MAX_OBS_POINTS]; /* Array of observations */
     float delta_t;
     uint  time; /* Time stamp */
-
+    LANDMARK obs[MAX_OBS_POINTS]; /* Array of observations */
 };
 //Particles buffer
-RWStructuredBuffer<PARTICLE> Particle:register(u0);
-//void Animate(uint3 id:SV_DispatchThreadID)
+
+StructuredBuffer<PARTICLE> particles_in:register(t0);
+RWStructuredBuffer<PARTICLE> particles_out:register(u0);
 [numthreads(64,1,1)]
 void predict(uint3 id:SV_DispatchThreadID)
 {
-    PARTICLE p = Particle[id.x];
+    PARTICLE p = particles_in[id.x];
 
-    p.x = p.x + velocity*delta_t;
-    float d = distance(float2(p.x, p.y), float2(p.x, p.y));
-    float4 gI = float4(0, 0, 0, 0);
-    float I = 0; // calcula la distancia entre dos vecotres con el teorema de pitagoras
+   // p.x = p.x + velocity*delta_t;
+   // float d = distance(float2(p.x, p.y), float2(p.x, p.y));
+    //float4 gI = float4(0, 0, 0, 0);
+    //float I = 0; // calcula la distancia entre dos vecotres con el teorema de pitagoras
+    particles_out[id.x].x = p.x;
+    particles_out[id.x].y = sensor_range;
+    particles_out[id.x].id = 11;
     // I = intensidad
 #if 0
     if (d < r)
