@@ -2,7 +2,8 @@
 Particle filter HLSL implementation
 */
 
-#define    MAX_OBS_POINTS (9)
+#define MAX_OBS_POINTS (12)
+#define EPSILON (1e-3)
 
 struct PARTICLE {
     float x;
@@ -59,23 +60,44 @@ cbuffer PF_STEP_DATA
     uint  time; /* Time stamp */
     LANDMARK obs[MAX_OBS_POINTS]; /* Array of observations */
 };
+
+
+/**/
 //Particles buffer
 
 StructuredBuffer<PARTICLE> particles_in:register(t0);
+StructuredBuffer<LANDMARK> map_data:register(t1);
 RWStructuredBuffer<PARTICLE> particles_out:register(u0);
 [numthreads(64,1,1)]
 void predict(uint3 id:SV_DispatchThreadID)
 {
     PARTICLE p = particles_in[id.x];
 
+    if (abs(yaw_rate) <= EPSILON)
+    {
+        particles_out[id.x].x = p.x + velocity * delta_t * cos(p.th);
+        particles_out[id.x].y = p.y + velocity * delta_t * sin(p.th);
+        particles_out[id.x].th = 0.0f;
+    }
+    else
+    {
+        particles_out[id.x].x = p.x + ((velocity / yaw_rate) * (sin(p.th + yaw_rate * delta_t) - sin(p.th)));
+        particles_out[id.x].y = p.y = p.y + ((velocity / yaw_rate) * (cos(p.th) - cos(p.th + yaw_rate * delta_t)));
+        particles_out[id.x].th = p.th + yaw_rate * delta_t;
+    }
+    particles_out[id.x].x = map_data[id.x].x;
+    particles_out[id.x].y = map_data[id.x].y;
+    particles_out[id.x].id = map_data[id.x].id;
+
+
+    /* Translate from particle coordinates to map location */
+
+
    // p.x = p.x + velocity*delta_t;
    // float d = distance(float2(p.x, p.y), float2(p.x, p.y));
     //float4 gI = float4(0, 0, 0, 0);
     //float I = 0; // calcula la distancia entre dos vecotres con el teorema de pitagoras
-    particles_out[id.x].x = p.x;
-    particles_out[id.x].y = sensor_range;
-    particles_out[id.x].id = 11;
-    // I = intensidad
+
 #if 0
     if (d < r)
     {

@@ -11,7 +11,7 @@
 /* Defines the number of particles used */
 #define MAX_PARTICLES (100*8)
 /* Defines the max obersvations to be used */
-#define MAX_OBS_POINTS     (8U)
+#define MAX_OBS_POINTS     (12U)
 
 /* Teoretical sensor range */
 #define SENSOR_RANGE (20U)

@@ -236,20 +236,35 @@ void StartParticles()
         pParticles[i].w = 1.0f;
     }
     g_pSBParticles = Manager.LoadBuffer(pParticles, sizeof(particle_t), MAX_PARTICLES);
-    g_pf_step_data.t = 1;
+    g_pf_step_data.t = 0;
+    
+}
 
+/*****************************************************************************
+Updates the data from the files and configurations to pass it to the constant
+buffer.
+*****************************************************************************/
+void updatePfInputData()
+{
     g_pf_step_data.sensor_range = SENSOR_RANGE;
     g_pf_step_data.delta_t = 0.1;
     g_pf_step_data.x_noise = sigma_landmark[0];
     g_pf_step_data.y_noise = sigma_landmark[2];
     g_pf_step_data.th_noise = sigma_landmark[2];
+
+    std::default_random_engine eng;
+    std::normal_distribution<float> x_obs_noise(0, sigma_landmark[0]);
+    std::normal_distribution<float> y_obs_noise(0, sigma_landmark[1]);
+
+    g_pf_step_data.velocity = position_meas[g_pf_step_data.t].velocity;
+    g_pf_step_data.yaw_rate = position_meas[g_pf_step_data.t].yaw_rate;
     for (size_t i = 0; i < observations.size() && i < MAX_OBS_POINTS; i++)
     {
-        g_pf_step_data.obs[i] = observations[i];
+        /* Add noise to the measurements of the landmarks */
+        //g_pf_step_data.obs[i] = observations[i];
+        g_pf_step_data.obs[i] = landmark_t{ observations[i].x + x_obs_noise(eng), observations[i].y + y_obs_noise(eng), observations[i].id };
     }
-
-
-   //
+    g_pf_step_data.t += 1;
 }
 
 
@@ -276,8 +291,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     /* fill the data for this step */
     g_pCBStepInfo = Manager.CreateConstantBuffer(sizeof(PF_STEP_DATA));
     Manager.UpdateConstantBuffer(g_pCBStepInfo, &g_pf_step_data, sizeof(PF_STEP_DATA));
-
-    /* F*/
 
     StartParticles();
     SetTimer(hWnd, 1, 10, 0);
@@ -359,8 +372,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         auto pCtx = Manager.GetContext();
         auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(particle_t), MAX_PARTICLES);
         ID3D11ShaderResourceView* pSRV = NULL;
+        ID3D11ShaderResourceView* pSRVMapData = NULL;
         ID3D11UnorderedAccessView* pUAV = NULL;
         Manager.GetDevice()->CreateShaderResourceView(pISBParticleIn, NULL, &pSRV);
+        Manager.GetDevice()->CreateShaderResourceView(pISBMapData, NULL, &pSRVMapData);
         Manager.GetDevice()->CreateUnorderedAccessView(pISBParticleOut, NULL, &pUAV);
 
         //Manager.GetContext()->CSSetUnorderedAccessViews(0, 1, &pUAV, NULL);
@@ -373,13 +388,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             (void**)&pBackBuffer);
         //        ID3D11UnorderedAccessView* pUAV = 0;
         //Manager.GetDevice()->CreateUnorderedAccessView(pBackBuffer, NULL, &pUAV); // crear la vista
-
+        updatePfInputData();
         Manager.UpdateConstantBuffer(g_pCBStepInfo, &g_pf_step_data, sizeof(g_pf_step_data));
 
         Manager.GetDevice()->CreateUnorderedAccessView(pISBParticleOut, NULL, &pUAV); // crear la vista
         Manager.GetContext()->CSSetUnorderedAccessViews(0, 1, &pUAV, NULL); //conectar la vista
         Manager.GetContext()->CSSetShader(g_pCSParticleFilter_Predict, NULL, NULL);
         Manager.GetContext()->CSSetShaderResources(0, 1, &pSRV);
+        Manager.GetContext()->CSSetShaderResources(1, 1, &pSRVMapData);
         pCtx->CSSetConstantBuffers(0, 1, &g_pCBStepInfo);        // set the constant buffer
         Manager.GetContext()->Dispatch( 256, 1, 1); // cada 1 representa 256 caracteres a transformar
         Manager.StoreBuffer(pISBParticleOut, sizeof(particle_t), MAX_PARTICLES, pParticles);
