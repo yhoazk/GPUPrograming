@@ -162,7 +162,8 @@ void main(uint3 id:SV_DispatchThreadID)
   2. Allocate memory for the structure defined in the previous step. Fill this buffer
     with vertex shader constatn data. (you can user malloc or new or you can allocate
       memory from the stack.)
-  3. Create a buffer descriptor by
+  3. Create a buffer descriptor by filling a `D3D11_BUFFER_DESC` structure. Pass the `D3D11_BIND_CONSTANTBUFFER` flag to the `BindFlags` memeber and pass the size of the
+  constant buffer description structure in bytes to the `ByteWidth` memeber.
 
 
 
@@ -220,6 +221,9 @@ http://web.cse.ohio-state.edu/~wang.3602/courses/cse5542-2013-spring/
 #### Scalar Data types
 https://msdn.microsoft.com/en-us/library/windows/desktop/bb509646(v=vs.85).aspx
 
+
+### Error codes
+https://msdn.microsoft.com/en-us/library/windows/desktop/dn508414(v=vs.85).aspx
 
 Tutorial:
 http://www.codinglabs.net/tutorial_compute_shaders_filters.aspx
