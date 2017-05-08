@@ -58,6 +58,8 @@ struct PF_STEP_DATA
     float sensor_range;
     float delta_t; // 0.1
     int32_t t; /* Time stamp */
+    int32_t obs_n;    // number of observations in this step
+    int32_t landmark_n;
     landmark_t obs[MAX_OBS_POINTS]; /* Array of observations */
 }g_pf_step_data;
 
@@ -258,6 +260,8 @@ void updatePfInputData()
 
     g_pf_step_data.velocity = position_meas[g_pf_step_data.t].velocity;
     g_pf_step_data.yaw_rate = position_meas[g_pf_step_data.t].yaw_rate;
+    g_pf_step_data.obs_n = observations.size();
+    g_pf_step_data.landmark_n = map.landmark_list.size();
     for (size_t i = 0; i < observations.size() && i < MAX_OBS_POINTS; i++)
     {
         /* Add noise to the measurements of the landmarks */

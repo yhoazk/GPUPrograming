@@ -39,8 +39,11 @@ cbuffer PF_STEP_DATA
     float sensor_range;
     float delta_t;
     uint  time; /* Time stamp */
+    uint  observations; //number of located landmarks in this step
+    uint map_marks; // number of landmarks in the current map
     LANDMARK obs[MAX_OBS_POINTS]; /* Array of observations */
 };
+
 
 
 /**/
@@ -53,7 +56,8 @@ RWStructuredBuffer<PARTICLE> particles_out:register(u0);
 void predict(uint3 id:SV_DispatchThreadID)
 {
     PARTICLE p = particles_in[id.x];
-                   /*
+    LANDMARK transformed_obs[MAX_OBS_POINTS];
+
     if (abs(yaw_rate) <= EPSILON)
     {
         particles_out[id.x].x = p.x + velocity * delta_t * cos(p.th);
@@ -65,18 +69,36 @@ void predict(uint3 id:SV_DispatchThreadID)
         particles_out[id.x].x = p.x + ((velocity / yaw_rate) * (sin(p.th + yaw_rate * delta_t) - sin(p.th)));
         particles_out[id.x].y = p.y = p.y + ((velocity / yaw_rate) * (cos(p.th) - cos(p.th + yaw_rate * delta_t)));
         particles_out[id.x].th = p.th + yaw_rate * delta_t;
-    }                        */
-    particles_out[id.x].x = map_data[id.x].x;
-    particles_out[id.x].y = map_data[id.x].y;
-    particles_out[id.x].id = id.x; //map_data[id.x+40].id;
+    }                        
+    /*wait for all the particles to finish the update procedure */
     AllMemoryBarrierWithGroupSync();
-    if (id.x == 0)
+    /* Rotate and translate each observation to match the vehicles location */
+    for (uint i = 0; i < observations; ++i)
     {
-        for (int i = 0; i < 64; i++)
-        {
-            particles_out[0].id += particles_out[i].id;
-        }
+        transformed_obs[i].x = obs[i].x * cos(p.th) - obs[i].y * sin(p.th) + p.x;
+        transformed_obs[i].y = obs[i].x * sin(p.th) + obs[i].y * cos(p.th) + p.y;
     }
+    AllMemoryBarrierWithGroupSync();
+    /* Data association pahse: get the id of the landmakr with smallest euclidean distance */
+    float min_dist = 1e100; // set minimun distance to a large number
+    float current_dist = min_dist;
+    for (int j = 0; j < map_marks; ++j)
+    {
+        for (uint i = 0; i < observations; ++i)
+        {
+            current_dist = distance(float2(transformed_obs[i].x, transformed_obs[i].y),float2(map_data[j].x, map_data[j].y));
+            if (current_dist < min_dist)
+            {
+                particles_out[id.x].id = map_data[j].id; // for test
+                transformed_obs[i].id = map_data[j].id;
+                min_dist = current_dist;
+            }
+        }
+    } 
+    /**/
+
+        
+    /* Association  */
 
 
 
