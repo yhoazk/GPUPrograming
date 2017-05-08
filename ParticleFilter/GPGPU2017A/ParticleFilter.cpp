@@ -251,8 +251,8 @@ void updatePfInputData()
     g_pf_step_data.sensor_range = SENSOR_RANGE;
     g_pf_step_data.delta_t = 0.1f;
     g_pf_step_data.x_noise = sigma_landmark[0];
-    g_pf_step_data.y_noise = sigma_landmark[2];
-    g_pf_step_data.th_noise = sigma_landmark[2];
+    g_pf_step_data.y_noise = sigma_landmark[1];
+    g_pf_step_data.th_noise = sigma_meas[2];
 
     std::default_random_engine eng;
     std::normal_distribution<float> x_obs_noise(0, sigma_landmark[0]);

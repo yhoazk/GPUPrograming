@@ -44,7 +44,19 @@ cbuffer PF_STEP_DATA
     LANDMARK obs[MAX_OBS_POINTS]; /* Array of observations */
 };
 
+float getMVN_weight(float xi, float yi, float uix, float uiy, float cov_xx, float cov_yy)
+{
+    float x_d = xi - uix;
+    float y_d = yi - uiy;
+    float X = (x_d * x_d) / (cov_xx*cov_xx);
+    float Y = (y_d * y_d) / (cov_yy*cov_yy);
+    /* The term involving rho=0 and thus the cross covariance is eliminated */
 
+    //return  (exp(-0.5f *(X + Y)) / (2.0f * 3.14159f * cov_xx *cov_yy));
+    //return  exp((X + Y)); // (exp(-0.5f *(X + Y)) / (2.0f * 3.14159f * cov_xx *cov_yy));
+    // return the logarithm instead of the e
+    return x_d;// (-1.0 * log(2.0f * 3.14159f * cov_xx *cov_yy)) - 0.5*(X + Y);
+}
 
 /**/
 //Particles buffer
@@ -57,7 +69,7 @@ void predict(uint3 id:SV_DispatchThreadID)
 {
     PARTICLE p = particles_in[id.x];
     LANDMARK transformed_obs[MAX_OBS_POINTS];
-
+    
     if (abs(yaw_rate) <= EPSILON)
     {
         particles_out[id.x].x = p.x + velocity * delta_t * cos(p.th);
@@ -70,6 +82,8 @@ void predict(uint3 id:SV_DispatchThreadID)
         particles_out[id.x].y = p.y = p.y + ((velocity / yaw_rate) * (cos(p.th) - cos(p.th + yaw_rate * delta_t)));
         particles_out[id.x].th = p.th + yaw_rate * delta_t;
     }                        
+    /* TODO: copy the weigth every time  */
+    particles_out[id.x].w = p.w;
     /*wait for all the particles to finish the update procedure */
     AllMemoryBarrierWithGroupSync();
     /* Rotate and translate each observation to match the vehicles location */
@@ -82,34 +96,36 @@ void predict(uint3 id:SV_DispatchThreadID)
     /* Data association pahse: get the id of the landmakr with smallest euclidean distance */
     float min_dist = 1e100; // set minimun distance to a large number
     float current_dist = min_dist;
-    for (int j = 0; j < map_marks; ++j)
+    for (uint j = 0; j < observations; ++j)
     {
-        for (uint i = 0; i < observations; ++i)
+        for (uint i = 0; i < map_marks; ++i)
         {
-            current_dist = distance(float2(transformed_obs[i].x, transformed_obs[i].y),float2(map_data[j].x, map_data[j].y));
+            current_dist = distance(float2(transformed_obs[j].x, transformed_obs[j].y),float2(map_data[i].x, map_data[i].y));
             if (current_dist < min_dist)
             {
-                particles_out[id.x].id = map_data[j].id; // for test
-                transformed_obs[i].id = map_data[j].id;
+                transformed_obs[j].id = map_data[i].id;
+                particles_out[id.x].id = map_data[i].id; // for test
                 min_dist = current_dist;
             }
         }
     } 
-    /**/
-
+    AllMemoryBarrierWithGroupSync();
+    float x_landmrk;
+    float y_landmrk;
+    /*Update weigths according to the mutlivariate normal distribution*/
+    for (uint k = 0; k < observations; k++)
+    {   /* The id of the landmark matches with its position in the array -1 */
+        x_landmrk = map_data[transformed_obs[k].id-1].x;
+        y_landmrk = map_data[transformed_obs[k].id-1].y;
+        /* As we applied the log to the function instead of multiply we add */
+        particles_out[id.x].w += getMVN_weight(transformed_obs[k].x, transformed_obs[k].y, x_landmrk, y_landmrk, x_noise, y_noise);
         
+    }
+    particles_out[id.x].w = exp(particles_out[id.x].w);
+
+    //particles_out[id.x].w = log(exp(8));// transformed_obs[1].id;
     /* Association  */
 
-
-
-
-    /* Translate from particle coordinates to map location */
-
-
-   // p.x = p.x + velocity*delta_t;
-   // float d = distance(float2(p.x, p.y), float2(p.x, p.y));
-    //float4 gI = float4(0, 0, 0, 0);
-    //float I = 0; // calcula la distancia entre dos vecotres con el teorema de pitagoras
 }
 
 #if 0
