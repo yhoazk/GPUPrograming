@@ -374,7 +374,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         auto pISBMapData    = Manager.LoadBuffer(&map.landmark_list[0], sizeof(Map::single_landmark_s), map.landmark_list.size());
         auto pISBParticleIn = Manager.LoadBuffer(pParticles, sizeof(particle_t), MAX_PARTICLES);
         auto pCtx = Manager.GetContext();
-        auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(Map::single_landmark_s), MAX_PARTICLES);
+        //auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(Map::single_landmark_s), MAX_PARTICLES);
+        auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(particle_t), MAX_PARTICLES);
         ID3D11ShaderResourceView* pSRV = NULL;
         ID3D11ShaderResourceView* pSRVMapData = NULL;
         ID3D11UnorderedAccessView* pUAV = NULL;
@@ -401,11 +402,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         Manager.GetContext()->CSSetShaderResources(0, 1, &pSRV);
         Manager.GetContext()->CSSetShaderResources(1, 1, &pSRVMapData);
         pCtx->CSSetConstantBuffers(0, 1, &g_pCBStepInfo);        // set the constant buffer
-        Manager.GetContext()->Dispatch( 1024, 1, 1); //
-        Manager.StoreBuffer(pISBParticleOut, sizeof(Map::single_landmark_s), MAX_PARTICLES, pParticles);
+        Manager.GetContext()->Dispatch(MAX_PARTICLES, 1, 1); //
+        //Manager.StoreBuffer(pISBParticleOut, sizeof(Map::single_landmark_s), MAX_PARTICLES, pParticles);
+        Manager.StoreBuffer(pISBParticleOut, sizeof(particle_t), MAX_PARTICLES, pParticles);
         std::ofstream out_txt;
         out_txt.open("toUpperer.txt", std::ofstream::out | std::ofstream::trunc);
         out_txt << (char*)pParticles;
+        /* Find the best particle: */
+        particle_t best;
+        float highest_weight = 0.0;
+        for (size_t i = 0; i < MAX_PARTICLES; i++)
+        {
+            if (pParticles[i].w > highest_weight) {
+                highest_weight = pParticles[i].w;
+                best = pParticles[i];
+            }
+                
+        }
+        std::cout << best.x;
+        std::cout << gt[g_pf_step_data.t].x;
         out_txt.close();
         std::cout << "-----------------------------------------------------------------------------------Test" << std::endl;
         pUAV->Release();

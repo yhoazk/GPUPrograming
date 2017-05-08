@@ -9,7 +9,7 @@
 #define PF_SIGMA_LNDMRK_X  (0.3f)
 #define PF_SIGMA_LNDMRK_Y  (0.3f)
 /* Defines the number of particles used */
-#define MAX_PARTICLES (100*8)
+#define MAX_PARTICLES (20)
 /* Defines the max obersvations to be used */
 #define MAX_OBS_POINTS     (12U)
 

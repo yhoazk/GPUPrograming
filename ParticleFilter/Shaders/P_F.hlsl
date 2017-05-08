@@ -84,6 +84,7 @@ void predict(uint3 id:SV_DispatchThreadID)
     }                        
     /* TODO: copy the weigth every time  */
     particles_out[id.x].w = p.w;
+    particles_out[id.x].id = id.x;
     /*wait for all the particles to finish the update procedure */
     AllMemoryBarrierWithGroupSync();
     /* Rotate and translate each observation to match the vehicles location */
@@ -121,10 +122,10 @@ void predict(uint3 id:SV_DispatchThreadID)
         particles_out[id.x].w += getMVN_weight(transformed_obs[k].x, transformed_obs[k].y, x_landmrk, y_landmrk, x_noise, y_noise);
         
     }
-    particles_out[id.x].w = exp(particles_out[id.x].w);
+    particles_out[id.x].w = exp(particles_out[id.x].w);   // using the properties of exponents remove the log from the calculation
+    AllMemoryBarrierWithGroupSync();
+    /* Find the best particle, i.e. the one with the highest weight */
 
-    //particles_out[id.x].w = log(exp(8));// transformed_obs[1].id;
-    /* Association  */
 
 }
 
