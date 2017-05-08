@@ -297,7 +297,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     Manager.UpdateConstantBuffer(g_pCBStepInfo, &g_pf_step_data, sizeof(PF_STEP_DATA));
 
     StartParticles();
-    SetTimer(hWnd, 1, 10, 0);
+    SetTimer(hWnd, 1, 1, 0);
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
 
@@ -371,62 +371,86 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_PAINT:
     {
 #if 1
-        auto pISBMapData    = Manager.LoadBuffer(&map.landmark_list[0], sizeof(Map::single_landmark_s), map.landmark_list.size());
-        auto pISBParticleIn = Manager.LoadBuffer(pParticles, sizeof(particle_t), MAX_PARTICLES);
-        auto pCtx = Manager.GetContext();
-        //auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(Map::single_landmark_s), MAX_PARTICLES);
-        auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(particle_t), MAX_PARTICLES);
-        ID3D11ShaderResourceView* pSRV = NULL;
-        ID3D11ShaderResourceView* pSRVMapData = NULL;
-        ID3D11UnorderedAccessView* pUAV = NULL;
-        Manager.GetDevice()->CreateShaderResourceView(pISBParticleIn, NULL, &pSRV);
-        Manager.GetDevice()->CreateShaderResourceView(pISBMapData, NULL, &pSRVMapData);
-        Manager.GetDevice()->CreateUnorderedAccessView(pISBParticleOut, NULL, &pUAV);
+        if (g_pf_step_data.t < 2444) {            // run only for the available observations
+            auto pISBMapData = Manager.LoadBuffer(&map.landmark_list[0], sizeof(Map::single_landmark_s), map.landmark_list.size());
+            auto pISBParticleIn = Manager.LoadBuffer(pParticles, sizeof(particle_t), MAX_PARTICLES);
+            auto pCtx = Manager.GetContext();
+            //auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(Map::single_landmark_s), MAX_PARTICLES);
+            auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(particle_t), MAX_PARTICLES);
+            ID3D11ShaderResourceView* pSRV = NULL;
+            ID3D11ShaderResourceView* pSRVMapData = NULL;
+            ID3D11UnorderedAccessView* pUAV = NULL;
+            Manager.GetDevice()->CreateShaderResourceView(pISBParticleIn, NULL, &pSRV);
+            Manager.GetDevice()->CreateShaderResourceView(pISBMapData, NULL, &pSRVMapData);
+            Manager.GetDevice()->CreateUnorderedAccessView(pISBParticleOut, NULL, &pUAV);
 
-        //Manager.GetContext()->CSSetUnorderedAccessViews(0, 1, &pUAV, NULL);
+            //Manager.GetContext()->CSSetUnorderedAccessViews(0, 1, &pUAV, NULL);
 
+            ID3D11Texture2D* pBackBuffer = 0;
+            Manager.GetSwapChain()->GetBuffer(0,/* Numero ordinal del buffer */
+                IID_ID3D11Texture2D,
+                (void**)&pBackBuffer);
+            //        ID3D11UnorderedAccessView* pUAV = 0;
+            //Manager.GetDevice()->CreateUnorderedAccessView(pBackBuffer, NULL, &pUAV); // crear la vista
+            updatePfInputData();
+            Manager.UpdateConstantBuffer(g_pCBStepInfo, &g_pf_step_data, sizeof(g_pf_step_data));
 
+            //Manager.GetDevice()->CreateUnorderedAccessView(pISBParticleOut, NULL, &pUAV); // crear la vista
+            Manager.GetContext()->CSSetUnorderedAccessViews(0, 1, &pUAV, NULL); //conectar la vista
+            Manager.GetContext()->CSSetShader(g_pCSParticleFilter_Predict, NULL, NULL);
+            Manager.GetContext()->CSSetShaderResources(0, 1, &pSRV);
+            Manager.GetContext()->CSSetShaderResources(1, 1, &pSRVMapData);
+            pCtx->CSSetConstantBuffers(0, 1, &g_pCBStepInfo);        // set the constant buffer
+            Manager.GetContext()->Dispatch(MAX_PARTICLES, 1, 1); //
+            //Manager.StoreBuffer(pISBParticleOut, sizeof(Map::single_landmark_s), MAX_PARTICLES, pParticles);
+            Manager.StoreBuffer(pISBParticleOut, sizeof(particle_t), MAX_PARTICLES, pParticles);
+            std::ofstream out_txt;
+            out_txt.open("pf_output.txt", std::ofstream::out | std::ofstream::app);
 
-        ID3D11Texture2D* pBackBuffer = 0;
-        Manager.GetSwapChain()->GetBuffer(0,/* Numero ordinal del buffer */
-            IID_ID3D11Texture2D,
-            (void**)&pBackBuffer);
-        //        ID3D11UnorderedAccessView* pUAV = 0;
-        //Manager.GetDevice()->CreateUnorderedAccessView(pBackBuffer, NULL, &pUAV); // crear la vista
-        updatePfInputData();
-        Manager.UpdateConstantBuffer(g_pCBStepInfo, &g_pf_step_data, sizeof(g_pf_step_data));
-
-        //Manager.GetDevice()->CreateUnorderedAccessView(pISBParticleOut, NULL, &pUAV); // crear la vista
-        Manager.GetContext()->CSSetUnorderedAccessViews(0, 1, &pUAV, NULL); //conectar la vista
-        Manager.GetContext()->CSSetShader(g_pCSParticleFilter_Predict, NULL, NULL);
-        Manager.GetContext()->CSSetShaderResources(0, 1, &pSRV);
-        Manager.GetContext()->CSSetShaderResources(1, 1, &pSRVMapData);
-        pCtx->CSSetConstantBuffers(0, 1, &g_pCBStepInfo);        // set the constant buffer
-        Manager.GetContext()->Dispatch(MAX_PARTICLES, 1, 1); //
-        //Manager.StoreBuffer(pISBParticleOut, sizeof(Map::single_landmark_s), MAX_PARTICLES, pParticles);
-        Manager.StoreBuffer(pISBParticleOut, sizeof(particle_t), MAX_PARTICLES, pParticles);
-        std::ofstream out_txt;
-        out_txt.open("toUpperer.txt", std::ofstream::out | std::ofstream::trunc);
-        out_txt << (char*)pParticles;
-        /* Find the best particle: */
-        particle_t best;
-        float highest_weight = 0.0;
-        for (size_t i = 0; i < MAX_PARTICLES; i++)
-        {
-            if (pParticles[i].w > highest_weight) {
-                highest_weight = pParticles[i].w;
-                best = pParticles[i];
+            /* Find the best particle: */
+            particle_t best;
+            float highest_weight = 0.0;
+            for (size_t i = 0; i < MAX_PARTICLES; i++)
+            {
+                if (pParticles[i].w > highest_weight) {
+                    highest_weight = pParticles[i].w;
+                    best = pParticles[i];
+                }
             }
-                
+            /* Resampling the data */
+            std::vector<particle_t> resampled_part(pParticles, pParticles + MAX_PARTICLES);
+            std::default_random_engine eng;
+            std::uniform_int_distribution<int> indx_rnd(0, MAX_PARTICLES - 1);
+            int index = indx_rnd(eng);
+            double mw = best.w;//*(std::max_element(weights.begin(), weights.end()));
+            std::uniform_real_distribution<double> beta_rnd(0, 2.0f * mw);
+            double beta = 0.0;
+            for (int i = 0; i < MAX_PARTICLES; ++i) {
+                beta += beta_rnd(eng);
+                while (beta > pParticles[index].w)
+                {
+                    beta -= pParticles[index].w;
+                    index = (index + 1) % MAX_PARTICLES;
+                }
+                resampled_part.push_back(particle_t{pParticles[index].x,pParticles[index].y, pParticles[index].th, 1.0f, -1 });
+            }
+            //weights.clear();
+            pParticles = &resampled_part[0];
+            /*******************************************************/
+
+            std::cout << best.x;
+            std::cout << gt[g_pf_step_data.t].x;
+            out_txt << g_pf_step_data.t << ", " << best.x << ", " << best.y << ", " << best.th << "\n";
+            out_txt.close();
+            pUAV->Release();
+            pBackBuffer->Release();
+            Manager.GetSwapChain()->Present(1, 0);
+            ValidateRect(hWnd, NULL);
         }
-        std::cout << best.x;
-        std::cout << gt[g_pf_step_data.t].x;
-        out_txt.close();
-        std::cout << "-----------------------------------------------------------------------------------Test" << std::endl;
-        pUAV->Release();
-        pBackBuffer->Release();
-        Manager.GetSwapChain()->Present(1, 0);
-        ValidateRect(hWnd, NULL);
+        else
+        {
+            MessageBox(hWnd, L"Done", L"No MapFile",1);
+        }
 #elif 0
         auto pCtx = Manager.GetContext();
         auto pDev = Manager.GetDevice();
