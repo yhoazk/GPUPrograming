@@ -247,7 +247,7 @@ buffer.
 void updatePfInputData()
 {
     g_pf_step_data.sensor_range = SENSOR_RANGE;
-    g_pf_step_data.delta_t = 0.1;
+    g_pf_step_data.delta_t = 0.1f;
     g_pf_step_data.x_noise = sigma_landmark[0];
     g_pf_step_data.y_noise = sigma_landmark[2];
     g_pf_step_data.th_noise = sigma_landmark[2];
@@ -370,7 +370,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         auto pISBMapData    = Manager.LoadBuffer(&map.landmark_list[0], sizeof(Map::single_landmark_s), map.landmark_list.size());
         auto pISBParticleIn = Manager.LoadBuffer(pParticles, sizeof(particle_t), MAX_PARTICLES);
         auto pCtx = Manager.GetContext();
-        auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(particle_t), MAX_PARTICLES);
+        auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(Map::single_landmark_s), MAX_PARTICLES);
         ID3D11ShaderResourceView* pSRV = NULL;
         ID3D11ShaderResourceView* pSRVMapData = NULL;
         ID3D11UnorderedAccessView* pUAV = NULL;
@@ -391,14 +391,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         updatePfInputData();
         Manager.UpdateConstantBuffer(g_pCBStepInfo, &g_pf_step_data, sizeof(g_pf_step_data));
 
-        Manager.GetDevice()->CreateUnorderedAccessView(pISBParticleOut, NULL, &pUAV); // crear la vista
+        //Manager.GetDevice()->CreateUnorderedAccessView(pISBParticleOut, NULL, &pUAV); // crear la vista
         Manager.GetContext()->CSSetUnorderedAccessViews(0, 1, &pUAV, NULL); //conectar la vista
         Manager.GetContext()->CSSetShader(g_pCSParticleFilter_Predict, NULL, NULL);
         Manager.GetContext()->CSSetShaderResources(0, 1, &pSRV);
         Manager.GetContext()->CSSetShaderResources(1, 1, &pSRVMapData);
         pCtx->CSSetConstantBuffers(0, 1, &g_pCBStepInfo);        // set the constant buffer
-        Manager.GetContext()->Dispatch( 256, 1, 1); // cada 1 representa 256 caracteres a transformar
-        Manager.StoreBuffer(pISBParticleOut, sizeof(particle_t), MAX_PARTICLES, pParticles);
+        Manager.GetContext()->Dispatch( 1024, 1, 1); //
+        Manager.StoreBuffer(pISBParticleOut, sizeof(Map::single_landmark_s), MAX_PARTICLES, pParticles);
         std::ofstream out_txt;
         out_txt.open("toUpperer.txt", std::ofstream::out | std::ofstream::trunc);
         out_txt << (char*)pParticles;

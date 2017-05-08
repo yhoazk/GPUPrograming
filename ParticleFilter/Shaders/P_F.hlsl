@@ -11,7 +11,7 @@ struct PARTICLE {
     float th;
     float w;
     uint  id;
-    float3 Padding;
+    //float3 Padding;
 };
 
 struct LANDMARK {
@@ -28,25 +28,6 @@ struct SPARK
 	float4 Color;
 	float  MaxAge;
 };
-/*
-cbuffer PARAMS
-{
-	float4 g;  //gravedad
-	float dt;  //dt->0  Se lee como Delta T.
-	float t;    //Current time!!!
-	float left;
-	float right;
-	float top;
-	float bottom;
-    // Particula con gravedad (gravity sources)
-    float r; // radio de influencia de la esfera
-    float kg; // constante gravitatoria
-    float4 Position; // posicion de la particula mayor
-    uint nParticles;
-    // NOTA se alinea el padding al elemento mas grande ene el struct
-};        */
-
-
 
 cbuffer PF_STEP_DATA
 {
@@ -72,7 +53,7 @@ RWStructuredBuffer<PARTICLE> particles_out:register(u0);
 void predict(uint3 id:SV_DispatchThreadID)
 {
     PARTICLE p = particles_in[id.x];
-
+                   /*
     if (abs(yaw_rate) <= EPSILON)
     {
         particles_out[id.x].x = p.x + velocity * delta_t * cos(p.th);
@@ -84,10 +65,20 @@ void predict(uint3 id:SV_DispatchThreadID)
         particles_out[id.x].x = p.x + ((velocity / yaw_rate) * (sin(p.th + yaw_rate * delta_t) - sin(p.th)));
         particles_out[id.x].y = p.y = p.y + ((velocity / yaw_rate) * (cos(p.th) - cos(p.th + yaw_rate * delta_t)));
         particles_out[id.x].th = p.th + yaw_rate * delta_t;
-    }
+    }                        */
     particles_out[id.x].x = map_data[id.x].x;
     particles_out[id.x].y = map_data[id.x].y;
-    particles_out[id.x].id = map_data[id.x].id;
+    particles_out[id.x].id = id.x; //map_data[id.x+40].id;
+    AllMemoryBarrierWithGroupSync();
+    if (id.x == 0)
+    {
+        for (int i = 0; i < 64; i++)
+        {
+            particles_out[0].id += particles_out[i].id;
+        }
+    }
+
+
 
 
     /* Translate from particle coordinates to map location */
@@ -97,42 +88,6 @@ void predict(uint3 id:SV_DispatchThreadID)
    // float d = distance(float2(p.x, p.y), float2(p.x, p.y));
     //float4 gI = float4(0, 0, 0, 0);
     //float I = 0; // calcula la distancia entre dos vecotres con el teorema de pitagoras
-
-#if 0
-    if (d < r)
-    {
-        I = kg*nParticles / (1.0f + d);
-        float4 Dir = normalize(Position - Spark.Position);
-        gI = kg * Dir;
-    }
-
-
-
-    Spark.Velocity = Spark.Velocity + (g*gI)*dt;
-    if (Spark.Position.y > bottom)
-    {
-        Spark.Position.y = bottom;
-        Spark.Velocity.y *= -0.4;
-    }
-    if (Spark.Position.y < top)
-    {
-        Spark.Position.y = top;
-        Spark.Velocity.y *= -0.4;
-    }
-    if (Spark.Position.x > right)
-    {
-        Spark.Position.x = right;
-        Spark.Velocity.x *= -0.4;
-    }
-    if (Spark.Position.x < left)
-    {
-        Spark.Position.x = left;
-        Spark.Velocity.x *= -0.4;
-    }
-    Sparks[id.x] = Spark;
-#endif // 0
-
-
 }
 
 #if 0
