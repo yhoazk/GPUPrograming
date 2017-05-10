@@ -166,7 +166,12 @@ void main(uint3 id:SV_DispatchThreadID)
   constant buffer description structure in bytes to the `ByteWidth` memeber.
 
 
-
+#### Direct compute:
+In order to get a visual studio project to compile a hlsl shader add the next external dependencies in the menu>project>settings
+* dxguid.lib
+* dxgi.lib
+* d3d11.lib
+* d3dcompiler.lib
 
 
 #### Timers
