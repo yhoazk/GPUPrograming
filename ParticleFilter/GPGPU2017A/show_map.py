@@ -40,7 +40,6 @@ def main():
 
     with open("data/gt_data.txt", 'r') as gt_file:
         for line in gt_file:
-            print(line)
             x,y,t = line.split(" ")#map(float, line.split("	"))
             gt_x.append(x)
             gt_y.append(y)
@@ -59,7 +58,6 @@ def main():
     """
     plt.grid('on')
     plt.show()
-    print(map_data.keys())
 
 
 if __name__ == "__main__":
