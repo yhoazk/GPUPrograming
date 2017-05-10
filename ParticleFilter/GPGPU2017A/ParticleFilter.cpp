@@ -55,7 +55,7 @@ struct PF_STEP_DATA
     float x_noise;  /* Current measurement noise */
     float y_noise;  /* Current measurement noise */
     float th_noise; /* Current measurement noise */
-    float sensor_range;
+    //float sensor_range;
     float delta_t; // 0.1
     int32_t t; /* Time stamp */
     int32_t obs_n;    // number of observations in this step
@@ -70,7 +70,10 @@ struct PF_STEP_DATA
 Map map;
 HWND hWnd;
 std::vector<control_t> position_meas;
-particle_t* pParticles = new particle_t[MAX_PARTICLES];
+//particle_t* pParticles = new particle_t[MAX_PARTICLES];
+std::vector<particle_t> pParticles;
+
+//particle_t* resampled_part = new  particle_t[MAX_PARTICLES];
 std::vector<particle_t> gt;
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
@@ -212,14 +215,8 @@ void StartParticles()
         MessageBox(hWnd, L"Error: Could not open ground truth data file", L"No base data file", 0);
         return;
     }
-
-    std::ostringstream obs_file;
-    obs_file << "data/observation/observations_" << std::setfill('0') << std::setw(6) << g_pf_step_data.t + 1 << ".txt";
-
-    if (!read_landmark_data(obs_file.str(), observations)) {
-        MessageBox(hWnd, L"Error: Could not open observation file ", L"No observation file", 0);
-        return;
-    }
+       /*
+ */
 
     std::normal_distribution<float> x_noise(gt[0].x, sigma_meas[0]);
     std::normal_distribution<float> y_noise(gt[0].y, sigma_meas[1]);
@@ -227,8 +224,8 @@ void StartParticles()
 
     if (g_pSBParticles) g_pSBParticles->Release();
     //Crear las particulas y sus valores iniciales
-
-    memset(pParticles, 0, sizeof(particle_t) * MAX_PARTICLES);
+    pParticles.reserve(MAX_PARTICLES);
+    //memset(pParticles, 0, sizeof(particle_t) * MAX_PARTICLES);
     for (int i = 0; i < MAX_PARTICLES; i++)
     {
         pParticles[i].x = x_noise(eng);
@@ -237,7 +234,7 @@ void StartParticles()
         pParticles[i].id = -1;
         pParticles[i].w = 1.0f;
     }
-    g_pSBParticles = Manager.LoadBuffer(pParticles, sizeof(particle_t), MAX_PARTICLES);
+    g_pSBParticles = Manager.LoadBuffer(&pParticles[0], sizeof(particle_t), MAX_PARTICLES);
     g_pf_step_data.t = 0;
     
 }
@@ -248,7 +245,8 @@ buffer.
 *****************************************************************************/
 void updatePfInputData()
 {
-    g_pf_step_data.sensor_range = SENSOR_RANGE;
+
+    //g_pf_step_data.sensor_range = SENSOR_RANGE;
     g_pf_step_data.delta_t = 0.1f;
     g_pf_step_data.x_noise = sigma_landmark[0];
     g_pf_step_data.y_noise = sigma_landmark[1];
@@ -260,13 +258,17 @@ void updatePfInputData()
 
     g_pf_step_data.velocity = position_meas[g_pf_step_data.t].velocity;
     g_pf_step_data.yaw_rate = position_meas[g_pf_step_data.t].yaw_rate;
-    g_pf_step_data.obs_n = observations.size();
+    g_pf_step_data.obs_n = MAX_OBS_POINTS; // observations.size();
     g_pf_step_data.landmark_n = map.landmark_list.size();
-    for (size_t i = 0; i < observations.size() && i < MAX_OBS_POINTS; i++)
+    for (size_t i = 0; /*i < observations.size() &&*/ i < MAX_OBS_POINTS; i++)
     {
         /* Add noise to the measurements of the landmarks */
         //g_pf_step_data.obs[i] = observations[i];
-        g_pf_step_data.obs[i] = landmark_t{ observations[i].x + x_obs_noise(eng), observations[i].y + y_obs_noise(eng), observations[i].id };
+        //g_pf_step_data.obs[i] = landmark_t{ observations[i].x + x_obs_noise(eng), observations[i].y + y_obs_noise(eng), observations[i].id };
+        g_pf_step_data.obs[i].x = observations[i].x + x_obs_noise(eng);
+        g_pf_step_data.obs[i].y = observations[i].y + y_obs_noise(eng);
+        g_pf_step_data.obs[i].id = observations[i].id;
+    
     }
     g_pf_step_data.t += 1;
 }
@@ -294,7 +296,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     /* fill the data for this step */
     g_pCBStepInfo = Manager.CreateConstantBuffer(sizeof(PF_STEP_DATA));
-    Manager.UpdateConstantBuffer(g_pCBStepInfo, &g_pf_step_data, sizeof(PF_STEP_DATA));
+   // Manager.UpdateConstantBuffer(g_pCBStepInfo, &g_pf_step_data, sizeof(PF_STEP_DATA));
 
     StartParticles();
     SetTimer(hWnd, 1, 1, 0);
@@ -372,8 +374,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
 #if 1
         if (g_pf_step_data.t < 2444) {            // run only for the available observations
+            /* at this point the particles are intialized, start a new batch of random particles */
+
             auto pISBMapData = Manager.LoadBuffer(&map.landmark_list[0], sizeof(Map::single_landmark_s), map.landmark_list.size());
-            auto pISBParticleIn = Manager.LoadBuffer(pParticles, sizeof(particle_t), MAX_PARTICLES);
+            auto pISBParticleIn = Manager.LoadBuffer(&pParticles[0], sizeof(particle_t), MAX_PARTICLES);
             auto pCtx = Manager.GetContext();
             //auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(Map::single_landmark_s), MAX_PARTICLES);
             auto pISBParticleOut = Manager.LoadBuffer(NULL, sizeof(particle_t), MAX_PARTICLES);
@@ -392,9 +396,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 (void**)&pBackBuffer);
             //        ID3D11UnorderedAccessView* pUAV = 0;
             //Manager.GetDevice()->CreateUnorderedAccessView(pBackBuffer, NULL, &pUAV); // crear la vista
-            updatePfInputData();
-            Manager.UpdateConstantBuffer(g_pCBStepInfo, &g_pf_step_data, sizeof(g_pf_step_data));
+            std::ostringstream obs_file;
+            obs_file << "data/observation/observations_" << std::setfill('0') << std::setw(6) << g_pf_step_data.t + 1 << ".txt";
 
+            if (!read_landmark_data(obs_file.str(), observations))
+            {
+                MessageBox(hWnd, L"Error: Could not open observation file ", L"No observation file", 0);
+                return -1;
+            }
+            updatePfInputData();
+
+          
+            Manager.UpdateConstantBuffer(g_pCBStepInfo, &g_pf_step_data, sizeof(PF_STEP_DATA));
             //Manager.GetDevice()->CreateUnorderedAccessView(pISBParticleOut, NULL, &pUAV); // crear la vista
             Manager.GetContext()->CSSetUnorderedAccessViews(0, 1, &pUAV, NULL); //conectar la vista
             Manager.GetContext()->CSSetShader(g_pCSParticleFilter_Predict, NULL, NULL);
@@ -403,22 +416,43 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             pCtx->CSSetConstantBuffers(0, 1, &g_pCBStepInfo);        // set the constant buffer
             Manager.GetContext()->Dispatch(MAX_PARTICLES, 1, 1); //
             //Manager.StoreBuffer(pISBParticleOut, sizeof(Map::single_landmark_s), MAX_PARTICLES, pParticles);
-            Manager.StoreBuffer(pISBParticleOut, sizeof(particle_t), MAX_PARTICLES, pParticles);
+            Manager.StoreBuffer(pISBParticleOut, sizeof(particle_t), MAX_PARTICLES, &pParticles[0]);
             std::ofstream out_txt;
             out_txt.open("pf_output.txt", std::ofstream::out | std::ofstream::app);
 
             /* Find the best particle: */
             particle_t best;
+            static std::vector<float> W;
             float highest_weight = 0.0;
             for (size_t i = 0; i < MAX_PARTICLES; i++)
             {
-                if (pParticles[i].w > highest_weight) {
+                if (pParticles[i].w > highest_weight)
+                {
                     highest_weight = pParticles[i].w;
                     best = pParticles[i];
                 }
+                W.push_back(pParticles[i].w);
             }
             /* Resampling the data */
+            static std::vector<particle_t> resampled_part;
+            resampled_part.clear();
+            std::random_device rd;
+            std::mt19937 eng(rd());
+            std::discrete_distribution<> d(W.begin(), W.end());
+            for (int i = 0; i <MAX_PARTICLES; ++i)
+            {
+                particle_t tmp = pParticles[d(eng)];
+                tmp.w = 1.0f;
+                resampled_part.push_back(tmp);
+            }
+            // restart the weigths
+            W.clear();
+            
+            pParticles = resampled_part; // this var won't die after?
+
+#if 0
             std::vector<particle_t> resampled_part(pParticles, pParticles + MAX_PARTICLES);
+           
             std::default_random_engine eng;
             std::uniform_int_distribution<int> indx_rnd(0, MAX_PARTICLES - 1);
             int index = indx_rnd(eng);
@@ -432,15 +466,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     beta -= pParticles[index].w;
                     index = (index + 1) % MAX_PARTICLES;
                 }
-                resampled_part.push_back(particle_t{pParticles[index].x,pParticles[index].y, pParticles[index].th, 1.0f, -1 });
+                //resampled_part.push_back(particle_t{pParticles[index].x,pParticles[index].y, pParticles[index].th, 1.0f, -1 });
+                resampled_part[i].x = pParticles[index].x;
+                resampled_part[i].y = pParticles[index].y;
+                resampled_part[i].th = pParticles[index].th;
+                resampled_part[i].id = -1;
+                resampled_part[i].w = 1.0;
             }
             //weights.clear();
             pParticles = &resampled_part[0];
+#endif
             /*******************************************************/
 
-            std::cout << best.x;
-            std::cout << gt[g_pf_step_data.t].x;
-            out_txt << g_pf_step_data.t << ", " << best.x << ", " << best.y << ", " << best.th << "\n";
+            //out_txt << g_pf_step_data.t << ", " << best.x << ", " << best.y << ", " << best.th << "\n";
+            out_txt   << best.x << " " << best.y << " " << best.th << "\n";
             out_txt.close();
             pUAV->Release();
             pBackBuffer->Release();
@@ -450,6 +489,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         else
         {
             MessageBox(hWnd, L"Done", L"No MapFile",1);
+            return -1;
         }
 #elif 0
         auto pCtx = Manager.GetContext();

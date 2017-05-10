@@ -4,18 +4,18 @@
 
 #include "PF_cfg.h"
 
-struct particle_t {
+typedef struct  {
     float_t x;
     float_t y;
     float_t th;
     float_t w;
     int32_t  id;
-};
+}particle_t;
 /* Shared struct for observation and landmark info */
 typedef struct {
     float_t x;
     float_t y;
-    float_t id;
+    UINT32 id;
 }landmark_t;
 
 

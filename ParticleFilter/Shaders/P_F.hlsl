@@ -2,8 +2,8 @@
 Particle filter HLSL implementation
 */
 
-#define MAX_OBS_POINTS (12)
-#define EPSILON (1e-3)
+#define MAX_OBS_POINTS (10)
+#define EPSILON (1e-6)
 
 struct PARTICLE {
     float x;
@@ -21,14 +21,6 @@ struct LANDMARK {
     
 };
 
-struct SPARK
-{
-	float4 Position;
-	float4 Velocity;
-	float4 Color;
-	float  MaxAge;
-};
-
 cbuffer PF_STEP_DATA
 {
     float velocity; /* Control input speed */
@@ -36,7 +28,7 @@ cbuffer PF_STEP_DATA
     float x_noise;  /* Current measurement noise */
     float y_noise;  /* Current measurement noise */
     float th_noise; /* Current measurement noise */
-    float sensor_range;
+    //float sensor_range; 
     float delta_t;
     uint  time; /* Time stamp */
     uint  observations; //number of located landmarks in this step
@@ -52,18 +44,20 @@ float getMVN_weight(float xi, float yi, float uix, float uiy, float cov_xx, floa
     float Y = (y_d * y_d) / (cov_yy*cov_yy);
     /* The term involving rho=0 and thus the cross covariance is eliminated */
 
-    //return  (exp(-0.5f *(X + Y)) / (2.0f * 3.14159f * cov_xx *cov_yy));
+    return   exp(-0.5f *(X + Y)) / (2.0f * 3.14159f * cov_xx *cov_yy);
     //return  exp((X + Y)); // (exp(-0.5f *(X + Y)) / (2.0f * 3.14159f * cov_xx *cov_yy));
     // return the logarithm instead of the e
-    return x_d;// (-1.0 * log(2.0f * 3.14159f * cov_xx *cov_yy)) - 0.5*(X + Y);
+    //return  (-1.0 * log(2.0f * 3.14159f * cov_xx *cov_yy)) - 0.5*(X + Y);
+    //float s = log(2.0f * cov_xx * cov_yy * 3.141592f);
+    //return -0.5f * (s + X + Y);
 }
 
 /**/
 //Particles buffer
 
 StructuredBuffer<PARTICLE> particles_in:register(t0);
-StructuredBuffer<LANDMARK> map_data:register(t1);
-RWStructuredBuffer<PARTICLE> particles_out:register(u0);
+StructuredBuffer<LANDMARK> map_data:register(t1);   
+RWStructuredBuffer<PARTICLE> particles_out:register(u0);                                        
 [numthreads(64,1,1)]
 void predict(uint3 id:SV_DispatchThreadID)
 {
@@ -79,53 +73,63 @@ void predict(uint3 id:SV_DispatchThreadID)
     else
     {
         particles_out[id.x].x = p.x + ((velocity / yaw_rate) * (sin(p.th + yaw_rate * delta_t) - sin(p.th)));
-        particles_out[id.x].y = p.y = p.y + ((velocity / yaw_rate) * (cos(p.th) - cos(p.th + yaw_rate * delta_t)));
+        particles_out[id.x].y = p.y + ((velocity / yaw_rate) * (cos(p.th) - cos(p.th + yaw_rate * delta_t)));
         particles_out[id.x].th = p.th + yaw_rate * delta_t;
     }                        
     /* TODO: copy the weigth every time  */
     particles_out[id.x].w = p.w;
-    particles_out[id.x].id = id.x;
     /*wait for all the particles to finish the update procedure */
     AllMemoryBarrierWithGroupSync();
     /* Rotate and translate each observation to match the vehicles location */
     for (uint i = 0; i < observations; ++i)
     {
         transformed_obs[i].x = obs[i].x * cos(p.th) - obs[i].y * sin(p.th) + p.x;
-        transformed_obs[i].y = obs[i].x * sin(p.th) + obs[i].y * cos(p.th) + p.y;
+        transformed_obs[i].y = obs[i].y * sin(p.th) + obs[i].y * cos(p.th) + p.y;
     }
     AllMemoryBarrierWithGroupSync();
+
     /* Data association pahse: get the id of the landmakr with smallest euclidean distance */
-    float min_dist = 1e100; // set minimun distance to a large number
-    float current_dist = min_dist;
+
     for (uint j = 0; j < observations; ++j)
     {
+        float min_dist = 1e100; // set minimun distance to a large number
+        float current_dist;
         for (uint i = 0; i < map_marks; ++i)
         {
             current_dist = distance(float2(transformed_obs[j].x, transformed_obs[j].y),float2(map_data[i].x, map_data[i].y));
             if (current_dist < min_dist)
             {
                 transformed_obs[j].id = map_data[i].id;
-                particles_out[id.x].id = map_data[i].id; // for test
+
                 min_dist = current_dist;
             }
         }
+
     } 
-    AllMemoryBarrierWithGroupSync();
+
+    //AllMemoryBarrierWithGroupSync();
     float x_landmrk;
     float y_landmrk;
     /*Update weigths according to the mutlivariate normal distribution*/
+    //if(id.x == 0)
     for (uint k = 0; k < observations; k++)
     {   /* The id of the landmark matches with its position in the array -1 */
-        x_landmrk = map_data[transformed_obs[k].id-1].x;
+               
+        x_landmrk = map_data[transformed_obs[k].id - 1].x;
         y_landmrk = map_data[transformed_obs[k].id-1].y;
         /* As we applied the log to the function instead of multiply we add */
-        particles_out[id.x].w += getMVN_weight(transformed_obs[k].x, transformed_obs[k].y, x_landmrk, y_landmrk, x_noise, y_noise);
+        particles_out[id.x].w += getMVN_weight(transformed_obs[k].x, transformed_obs[k].y, x_landmrk, y_landmrk, 0.3f/*x_noise*/, 0.3f/* y_noise*/);
+       // particles_out[k].x = x_landmrk; // map_data[transformed_obs[k].id-1].x;
+       // particles_out[k].y = y_landmrk; // map_data[transformed_obs[k].id - 1].y;
+
+       // particles_out[k].th =  transformed_obs[k].x;
+        //particles_out[k].w = transformed_obs[k].y;
+       // particles_out[k].id = transformed_obs[k].id;//  transformed_obs[2].id;// transformed_obs[0].id;
         
     }
-    particles_out[id.x].w = exp(particles_out[id.x].w);   // using the properties of exponents remove the log from the calculation
+    //particles_out[id.x].w = exp(particles_out[id.x].w);   // using the properties of exponents remove the log from the calculation
     AllMemoryBarrierWithGroupSync();
     /* Find the best particle, i.e. the one with the highest weight */
-
 
 }
 
