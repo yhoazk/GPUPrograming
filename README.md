@@ -3,6 +3,13 @@
 ITESO GPU programming Hwks and reads
 
 
+## TODO:
+
+* GPU Architecture
+* [Ray casting](http://lodev.org/cgtutor/raycasting.html)
+
+
+
 Vertical operations and horizontal operations:
 
 
